@@ -122,12 +122,11 @@ class Person
 end
 
 def tick args
-    # draw many people
     args.state.people ||= Array.new(50) { Person.new }
+    args.state.paused ||= false
     
     args.outputs.labels << [10,30, "People  = #{args.state.people.count}"]
-    
-    # show the people
+
     args.state.people.each do |p|
       p.show(args.outputs)
       p.move!
