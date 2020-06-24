@@ -4,7 +4,7 @@ WIDTH = 1280
 HEIGHT = 720
 
 class Person
-    attr_accessor :x, :y, :infected, :change_x, :change_y
+    attr_accessor :infected, :change_x, :change_y
     attr_reader :show_infected_for
     attr_sprite
     
@@ -12,13 +12,15 @@ class Person
     SIZE = 25
     SHOW_INFECTED_FOR = 10
     
-    def initialize(x: nil, y: nil, infected: nil, change_x: nil, change_y: nil)
-        @x = x || rand(WIDTH)
-        @y = y || rand(HEIGHT)
-        @infected = infected || rand(100) < PREVALENCE
-        @change_x = change_x || rand(10) - 5
-        @change_y = change_y || rand(10) - 5
-        self.path = 'sprites/person.png'
+    def initialize
+        @x = rand(WIDTH)
+        @y = rand(HEIGHT)
+        @w = SIZE
+        @h = SIZE
+        @infected = rand(100) < PREVALENCE
+        @change_x = rand(5) - 2
+        @change_y = rand(5) - 2
+        @path = 'sprites/person.png'
     end
 
     def serialize
@@ -35,15 +37,16 @@ class Person
 
     def show(outputs)
       if @show_infected_for > 0
-        outputs.sprites << [@x, @y, SIZE, SIZE, "sprites/person-exposed.png"]
+        @path = "sprites/person-exposed.png"
         @show_infected_for = @show_infected_for - 1
       else
         if @infected
-          outputs.sprites << [@x, @y, SIZE, SIZE, "sprites/person-infected.png"]
+          @path = "sprites/person-infected.png"
         else
-          outputs.sprites << [@x, @y, SIZE, SIZE, "sprites/person.png"]
+          @path = "sprites/person.png"
         end
       end
+      outputs.sprites << self
     end
 
     def move!
@@ -67,15 +70,11 @@ class Person
       end
     end
 
-    def rect
-      [@x, @y, SIZE, SIZE]
-    end
-
     # check if I have been infected
     def check(people)
       return if @infected
 
-      if people.any? { |other| other.infected and other.rect.intersect_rect?(self.rect) }
+      if people.any? { |other| other.infected and other.intersect_rect?(self) }
         @show_infected_for = SHOW_INFECTED_FOR
         @infected = true
       end
@@ -92,7 +91,12 @@ def tick args
     args.state.people.each do |p|
       p.show(args.outputs)
       p.move!
-      p.check(args.state.people)
+
+      # let people move smoothly, only check for collision after they have moved a max of 8 pixels
+      # you can miss some, but only if they have "grazed each other" which could be considered realistic
+      if args.state.tick_count % 4 == 0
+        p.check(args.state.people)
+      end
     end
 end
 
